@@ -1,7 +1,7 @@
 from ion import *
 from kandinsky import *
-from random import *
-import math
+from random import randint
+from math import floor
 
 class Silo:
     def __init__(self,x,y, missiles):
@@ -17,8 +17,6 @@ class Silo:
         fill_rect(self.x,self.y+4,30,3,(50,50,50))
 
     def draw_missile_number(self):
-        #if self.missiles < 10:
-         #   fill_rect(self.x + 10,0,10,10,(50,210,25))
         draw_string((str(self.missiles)),self.x,1,(254,254,254),(0,0,0))
 
 
@@ -64,11 +62,11 @@ class Anti_missile:
         self.explode = True
 
     def explosion(self):
-        if self.explode_frames % 2 == 0:
+        if self.explode_frames % 1 == 0:
             self.explosion_width += 1
             if self.explosion_width > 20:
                 self.explosion_width = 20
-            fill_rect(round(self.x - (self.explosion_width / 2)), round(self.y - (self.explosion_width / 2)), round(self.explosion_width),round(self.explosion_width),self.explosion_colors[math.floor(self.explosionc_color_index)])
+            fill_rect(round(self.x - (self.explosion_width / 2)), round(self.y - (self.explosion_width / 2)), round(self.explosion_width),round(self.explosion_width),self.explosion_colors[floor(self.explosionc_color_index)])
         self.explode_frames += 1
         self.explosionc_color_index += 0.5
         if self.explosionc_color_index == 2:
@@ -96,7 +94,6 @@ class Curser:
     def __init__(self,x,y,side_lenght,colour,colour_main):
         self.x = x
         self.y = y
-        self.side_lenght = side_lenght
         self.colour = colour
         self.colour_main = colour_main
         
@@ -129,6 +126,26 @@ class Curser:
         fill_rect(self.x,self.y + 1,1,self.side_lenght,(self.colour))
         fill_rect(self.x + 1,self.y,self.side_lenght,1,(self.colour))
         fill_rect(self.x - self.side_lenght,self.y,self.side_lenght,1,(self.colour))
+
+class Lockon:
+    def __init__(self,x,y):
+        self.x = x
+        self.y = y
+        self.lock_frames = 0
+
+    def draw(self):
+        if self.lock_frames % 4 == 0:
+            for i in range(0,6):
+                set_pixel(i + self.x - 4, i - self.y + 4,(254,254,254))
+            for i in range(0,6):
+                 set_pixel(i - self.x + 4, i - self.y + 4,(254,254,254))
+        elif (self.lock_frames % 4) -2 == 0:
+            for i in range(0,6):
+                set_pixel(i + self.x - 4, i - self.y + 4,(0,0,0))
+            for i in range(0,6):
+                 set_pixel(i - self.x + 4, i - self.y + 4,(0,0,0))
+        self.lock_frames += 1
+
 
 class Missile:
     def __init__(self,target,speed):
@@ -187,6 +204,8 @@ silo_names = [asilo,bsilo,gsilo]
 
 targets = ((asilo.x+15,asilo.y),(acity.x+12,acity.y),(bcity.x+12,bcity.y),(ccity.x+12,ccity.y),(bsilo.x+15,bsilo.y),(dcity.x+12,dcity.y),(ecity.x+12,ecity.y),(fcity.x+12,fcity.y),(gsilo.x+15,gsilo.y))
 
+active_lokon = []
+
 while True:
     #silo reset
     for j in silo_names:
@@ -197,15 +216,13 @@ while True:
     g_couldown = 0
     list_anti_missile = []
 
-    #acurser.draw()
 
     #create missiles
-    list_missile = []
-    name_missile = []
+    active_missiles = []
+    inactive_missile = []
     for j in range(0,randint(15,23)):
-        amissile= Missile(targets,0.25)
-        name_missile.append(amissile)
-
+        amissile = Missile(targets,0.25)
+        inactive_missile.append(amissile)
 
 
     #list_couldown = [a_couldown,b_couldown,g_couldown]
@@ -215,30 +232,34 @@ while True:
         g_couldown += 1
 
         #sumon missile
-        for j in name_missile:
+        for j in inactive_missile:
             if j.summon_frame == e:
-                list_missile.append(j)
-                name_missile.remove(j)
-        
-        amissile.mouve()
-        acurser.mouve()
+                active_missiles.append(j)
+                inactive_missile.remove(j)
 
+        
         #shoot need to compact in class silo.shoot
         if keydown(KEY_ONE) == True and asilo.missiles > 0 and a_couldown >= 10:
             aantimissile = Anti_missile(asilo.x + 15,asilo.y - 1,acurser.x,acurser.y)
             list_anti_missile.append(aantimissile)
             a_couldown = 0
             asilo.missiles += -1
+            alokon = Lockon(acurser.x,acurser.y)
+            active_lokon.append(alokon)
         if keydown(KEY_TWO) == True and bsilo.missiles > 0 and b_couldown >= 10:
             bantimissile = Anti_missile(bsilo.x + 15,bsilo.y - 1,acurser.x,acurser.y)
             list_anti_missile.append(bantimissile)
             b_couldown = 0
             bsilo.missiles += -1
+            blokon = Lockon(acurser.x,acurser.y)
+            active_lokon.append(blokon)
         if keydown(KEY_THREE) == True and gsilo.missiles > 0 and g_couldown >= 10:
             gantimissile = Anti_missile(gsilo.x + 15,gsilo.y - 1,acurser.x,acurser.y)
             list_anti_missile.append(gantimissile)
             g_couldown = 0
             gsilo.missiles += -1
+            glokon = Lockon(acurser.x,acurser.y)
+            active_lokon.append(glokon)
         
         #antimissile loop
         for i in list_anti_missile:
@@ -252,37 +273,45 @@ while True:
                     i.delet_explosion()
                     list_anti_missile.remove(i)
             #collision
-            for j in list_missile:
+            for j in active_missiles:
                 if i.x - (i.explosion_width/2) < j.x and i.x + (i.explosion_width/2) > j.x and i.y - (i.explosion_width/2) < j.y and i.y + (i.explosion_width/2) > j.y:
                     j.delet()
-                    list_missile.remove(j)
+                    active_missiles.remove(j)
                     del(j)
 
 
         #missile loop
-        for j in list_missile:
+        for j in active_missiles:
             j.mouve()
 
 
         #city loop
         for i in city_names:
-            for j in list_missile:
+            for j in active_missiles:
                 if j.y >= i.y and j.x >= i.x  and j.x <= (i.x + 25):
                     i.delet()
                     i.destroied = True
                     j.delet()
-                    list_missile.remove(j)
+                    active_missiles.remove(j)
                     del(j)
 
         #silo loop
         for i in silo_names:
             i.draw_missile_number()
-            for j in list_missile:
+            for j in active_missiles:
                 if j.y >= i.y and j.x >= i.x  and j.x <= (i.x + 30):
                     i.delet()
                     i.missiles = 0
                     j.delet()
-                    list_missile.remove(j)
+                    active_missiles.remove(j)
                     del(j)
+        
+        #curser/lokon loop
+        acurser.mouve()
+        for i in active_lokon:
+            i.draw()
+            if i.lock_frames == 40:
+                active_lokon.remove(i)
+                del(i)
 
 # keydown(KEY_RIGHT)
